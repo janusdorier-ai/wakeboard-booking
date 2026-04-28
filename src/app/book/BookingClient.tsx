@@ -173,11 +173,18 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
                   <div className="text-xl font-bold tabular-nums leading-none">{s.start_time}</div>
                   <div className="text-[9px] opacity-80 mt-1.5 tracking-widest">{SLOT_LABEL[s.state]}</div>
                   {s.booking && (
-                    <div className="mt-2 flex gap-0.5">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className={`h-1.5 w-full ${i < s.booking!.member_count ? 'bg-current' : 'bg-current/20'}`} />
-                      ))}
-                    </div>
+                    <>
+                      <div className="mt-2 flex gap-0.5">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className={`h-1.5 w-full ${i < s.booking!.member_count ? 'bg-current' : 'bg-current/20'}`} />
+                        ))}
+                      </div>
+                      {s.members && s.members.length > 0 && (
+                        <div className="mt-1.5 text-[9px] tracking-widest opacity-80 truncate">
+                          {s.members.map(m => initials(m.full_name)).join('·')}
+                        </div>
+                      )}
+                    </>
                   )}
                 </button>
               )
@@ -265,6 +272,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Legend({ cls, label }: { cls: string; label: string }) {
   return <div className="flex items-center gap-2"><span className={`inline-block h-2 w-2 ${cls}`} />{label}</div>
+}
+
+function initials(name?: string): string {
+  if (!name) return '··'
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '··'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
 function humanError(code: string): string {

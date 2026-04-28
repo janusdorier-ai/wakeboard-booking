@@ -7,17 +7,39 @@ import { CnvMark } from '@/components/CnvMark'
 import type { Booking, ClubConfig } from '@/lib/booking/types'
 
 interface DayOverride { date: string; am_open: boolean; pm_open: boolean; note: string | null }
+interface PrivateConfig {
+  notify_email: string | null
+  resend_api_key: string | null
+  notify_from_email: string
+  digest_enabled: boolean
+  events_enabled: boolean
+}
+type MembersByBooking = Record<string, { user_id: string; full_name: string | null }[]>
 
 const inputCls = 'w-full bg-white border border-slate-300 px-2 py-1.5 text-cnv-navy focus:outline-none focus:border-cnv-navy font-mono text-sm'
 
-export function AdminClient({ config, bookings, overrides }: {
-  config: ClubConfig; bookings: Booking[]; overrides: DayOverride[]
-}) {
+interface Props {
+  config: ClubConfig
+  privateConfig: PrivateConfig | null
+  bookings: Booking[]
+  overrides: DayOverride[]
+  membersByBooking: MembersByBooking
+  todayDate: string
+  tomorrowDate: string
+}
+
+export function AdminClient({ config, privateConfig, bookings, overrides, membersByBooking, todayDate, tomorrowDate }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const [cfg, setCfg] = useState(config)
+  const [pcfg, setPcfg] = useState<PrivateConfig>(privateConfig ?? {
+    notify_email: '', resend_api_key: '', notify_from_email: 'onboarding@resend.dev',
+    digest_enabled: true, events_enabled: true,
+  })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg]   = useState<string | null>(null)
+  const [pBusy, setPBusy] = useState(false)
+  const [pMsg, setPMsg]   = useState<string | null>(null)
 
   async function saveConfig() {
     setBusy(true); setMsg(null)
@@ -37,6 +59,27 @@ export function AdminClient({ config, bookings, overrides }: {
     if (error) setMsg(error.message); else { setMsg('SAVED'); router.refresh() }
   }
 
+  async function savePrivateConfig() {
+    setPBusy(true); setPMsg(null)
+    const { error } = await supabase.from('private_config').update({
+      notify_email: pcfg.notify_email,
+      resend_api_key: pcfg.resend_api_key,
+      notify_from_email: pcfg.notify_from_email,
+      digest_enabled: pcfg.digest_enabled,
+      events_enabled: pcfg.events_enabled,
+      updated_at: new Date().toISOString(),
+    }).eq('id', 1)
+    setPBusy(false)
+    if (error) setPMsg(error.message); else { setPMsg('SAVED'); router.refresh() }
+  }
+
+  async function sendTestDigest() {
+    setPBusy(true); setPMsg('Sending test digest…')
+    const { error } = await supabase.rpc('send_daily_digest')
+    setPBusy(false)
+    setPMsg(error ? `ERR: ${error.message}` : 'Digest sent — check inbox')
+  }
+
   async function cancelBooking(id: string) {
     if (!confirm('Cancel this booking?')) return
     const { error } = await supabase.rpc('admin_cancel_booking', { p_booking_id: id })
@@ -47,6 +90,10 @@ export function AdminClient({ config, bookings, overrides }: {
     const { error } = await supabase.from('day_overrides').upsert({ date, am_open, pm_open, note: note ?? null })
     if (error) alert(error.message); else router.refresh()
   }
+
+  const todayBookings    = bookings.filter(b => b.date === todayDate)
+  const tomorrowBookings = bookings.filter(b => b.date === tomorrowDate)
+  const futureBookings   = bookings.filter(b => b.date > tomorrowDate)
 
   return (
     <main className="min-h-screen bg-slate-50 text-cnv-navy relative overflow-hidden">
@@ -67,6 +114,61 @@ export function AdminClient({ config, bookings, overrides }: {
           </Link>
         </header>
 
+        {/* Today + Tomorrow at-a-glance */}
+        <DayBlock title="TODAY"    date={todayDate}    bookings={todayBookings}    membersByBooking={membersByBooking} onCancel={cancelBooking} />
+        <DayBlock title="TOMORROW" date={tomorrowDate} bookings={tomorrowBookings} membersByBooking={membersByBooking} onCancel={cancelBooking} />
+
+        {/* Notifications */}
+        <section className="mt-6 border border-slate-200 bg-white p-5">
+          <h2 className="font-mono text-xs tracking-widest text-cnv-navy">▸ NOTIFICATIONS</h2>
+          <p className="mt-1 text-xs text-slate-500 font-mono">
+            Email when slots confirm, fill, or get cancelled. Plus a daily digest at 18:00 (CET).
+          </p>
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <Field label="NOTIFY_EMAIL (e.g. Jenny)">
+              <input value={pcfg.notify_email ?? ''}
+                onChange={e => setPcfg({ ...pcfg, notify_email: e.target.value })}
+                placeholder="jenny@cnv.ch" className={inputCls} />
+            </Field>
+            <Field label="FROM_EMAIL">
+              <input value={pcfg.notify_from_email}
+                onChange={e => setPcfg({ ...pcfg, notify_from_email: e.target.value })}
+                placeholder="onboarding@resend.dev" className={inputCls} />
+            </Field>
+            <div className="col-span-2">
+              <Field label="RESEND_API_KEY">
+                <input type="password" value={pcfg.resend_api_key ?? ''}
+                  onChange={e => setPcfg({ ...pcfg, resend_api_key: e.target.value })}
+                  placeholder="re_…" className={inputCls} />
+              </Field>
+            </div>
+            <label className="flex items-center gap-2 text-xs font-mono text-slate-600">
+              <input type="checkbox" checked={pcfg.events_enabled}
+                onChange={e => setPcfg({ ...pcfg, events_enabled: e.target.checked })}
+                className="accent-cnv-navy" />
+              EVENT_NOTIFICATIONS (confirm/full/cancel)
+            </label>
+            <label className="flex items-center gap-2 text-xs font-mono text-slate-600">
+              <input type="checkbox" checked={pcfg.digest_enabled}
+                onChange={e => setPcfg({ ...pcfg, digest_enabled: e.target.checked })}
+                className="accent-cnv-navy" />
+              DAILY_DIGEST (18:00 CET)
+            </label>
+          </div>
+          <div className="mt-5 flex items-center gap-3">
+            <button disabled={pBusy} onClick={savePrivateConfig}
+              className="bg-cnv-navy text-white px-5 py-2.5 font-mono font-bold tracking-widest text-xs hover:bg-cnv-navy-3 disabled:opacity-40">
+              {pBusy ? '▸ SAVING…' : '▸ SAVE_NOTIFICATIONS'}
+            </button>
+            <button disabled={pBusy || !pcfg.notify_email || !pcfg.resend_api_key} onClick={sendTestDigest}
+              className="border border-slate-300 px-4 py-2.5 font-mono font-bold tracking-widest text-xs hover:border-cnv-navy/50 disabled:opacity-40">
+              ▸ SEND_TEST_DIGEST
+            </button>
+            {pMsg && <span className="text-xs font-mono text-slate-500">{pMsg}</span>}
+          </div>
+        </section>
+
+        {/* Club config */}
         <section className="mt-6 border border-slate-200 bg-white p-5">
           <h2 className="font-mono text-xs tracking-widest text-cnv-navy">▸ CLUB_CONFIG</h2>
           <div className="grid grid-cols-2 gap-3 mt-4">
@@ -93,24 +195,13 @@ export function AdminClient({ config, bookings, overrides }: {
           {msg && <span className="ml-3 text-xs font-mono text-slate-500">{msg}</span>}
         </section>
 
+        {/* Future bookings */}
         <section className="mt-6 border border-slate-200 bg-white p-5">
-          <h2 className="font-mono text-xs tracking-widest text-cnv-navy">▸ UPCOMING_BOOKINGS [14d]</h2>
-          {bookings.length === 0 && <p className="mt-3 text-sm text-slate-500 font-mono">▸ NO_BOOKINGS</p>}
+          <h2 className="font-mono text-xs tracking-widest text-cnv-navy">▸ NEXT_14_DAYS [{futureBookings.length}]</h2>
+          {futureBookings.length === 0 && <p className="mt-3 text-sm text-slate-500 font-mono">▸ NO_BOOKINGS</p>}
           <ul className="mt-3 divide-y divide-slate-100">
-            {bookings.map(b => (
-              <li key={b.id} className="flex items-center gap-3 py-2 text-xs font-mono">
-                <span className="tabular-nums">{b.date}</span>
-                <span className="font-bold text-cnv-navy">[{b.period}]</span>
-                <span className="tabular-nums">{b.start_time.slice(0,5)}–{b.end_time.slice(0,5)}</span>
-                <span className="text-slate-500 tabular-nums">{b.member_count}/4</span>
-                <span className={`ml-auto border px-2 py-0.5 text-[10px] tracking-widest uppercase ${
-                  b.status === 'pending'   ? 'border-orange-400 text-orange-700 bg-orange-50' :
-                  b.status === 'confirmed' ? 'border-emerald-500 text-emerald-700 bg-emerald-50' :
-                                             'border-purple-400 text-purple-700 bg-purple-50'
-                }`}>{b.status}</span>
-                <button onClick={() => cancelBooking(b.id)}
-                  className="text-slate-500 hover:text-red-700 text-[10px] tracking-widest">[CANCEL]</button>
-              </li>
+            {futureBookings.map(b => (
+              <BookingRow key={b.id} b={b} membersByBooking={membersByBooking} onCancel={cancelBooking} showDate />
             ))}
           </ul>
         </section>
@@ -132,6 +223,48 @@ export function AdminClient({ config, bookings, overrides }: {
         </section>
       </div>
     </main>
+  )
+}
+
+function DayBlock({ title, date, bookings, membersByBooking, onCancel }: {
+  title: string; date: string; bookings: Booking[];
+  membersByBooking: MembersByBooking; onCancel: (id: string) => void
+}) {
+  return (
+    <section className="mt-6 border border-slate-200 bg-white p-5">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-mono text-xs tracking-widest text-cnv-navy">▸ {title}</h2>
+        <span className="font-mono text-[10px] tracking-widest text-slate-500">{date}</span>
+      </div>
+      {bookings.length === 0 && <p className="mt-3 text-sm text-slate-500 font-mono">▸ NO_SESSIONS</p>}
+      <ul className="mt-3 divide-y divide-slate-100">
+        {bookings.map(b => (
+          <BookingRow key={b.id} b={b} membersByBooking={membersByBooking} onCancel={onCancel} />
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function BookingRow({ b, membersByBooking, onCancel, showDate }: {
+  b: Booking; membersByBooking: MembersByBooking; onCancel: (id: string) => void; showDate?: boolean
+}) {
+  const names = (membersByBooking[b.id] ?? []).map(m => m.full_name ?? '?').join(', ')
+  return (
+    <li className="flex items-center gap-3 py-2 text-xs font-mono">
+      {showDate && <span className="tabular-nums">{b.date}</span>}
+      <span className="font-bold text-cnv-navy">[{b.period}]</span>
+      <span className="tabular-nums">{b.start_time.slice(0,5)}–{b.end_time.slice(0,5)}</span>
+      <span className="text-slate-500 tabular-nums">{b.member_count}/4</span>
+      <span className="text-slate-700 truncate max-w-[200px]" title={names}>{names || '—'}</span>
+      <span className={`ml-auto border px-2 py-0.5 text-[10px] tracking-widest uppercase ${
+        b.status === 'pending'   ? 'border-orange-400 text-orange-700 bg-orange-50' :
+        b.status === 'confirmed' ? 'border-emerald-500 text-emerald-700 bg-emerald-50' :
+                                   'border-purple-400 text-purple-700 bg-purple-50'
+      }`}>{b.status}</span>
+      <button onClick={() => onCancel(b.id)}
+        className="text-slate-500 hover:text-red-700 text-[10px] tracking-widest">[CANCEL]</button>
+    </li>
   )
 }
 
