@@ -75,7 +75,7 @@ export function AdminClient({ config, privateConfig, bookings, overrides, member
 
   async function sendTestDigest() {
     setPBusy(true); setPMsg('Sending test digest…')
-    const { error } = await supabase.rpc('send_daily_digest')
+    const { error } = await supabase.rpc('admin_send_daily_digest')
     setPBusy(false)
     setPMsg(error ? `ERR: ${error.message}` : 'Digest sent — check inbox')
   }
