@@ -1,0 +1,9 @@
+{
+  "name": "CNV Wakeboard",
+  "short_name": "CNV Wake",
+  "start_url": "/book",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#14305f",
+  "icons": []
+}
