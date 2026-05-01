@@ -1,7 +1,7 @@
 'use client'
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CnvMark } from '@/components/CnvMark'
 
@@ -33,10 +33,9 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function AuthForm() {
-  const supabase   = createClient()
-  const params     = useSearchParams()
-  const next       = params.get('next') ?? '/book'
-  // ?mode=signup comes from the landing page "Join" button
+  const supabase = createClient()
+  const params   = useSearchParams()
+  const next     = params.get('next') ?? '/book'
   const [mode, setMode] = useState<'signin' | 'signup'>(
     params.get('mode') === 'signup' ? 'signup' : 'signin'
   )
@@ -72,42 +71,45 @@ function AuthForm() {
     <Shell>
       {/* Mode toggle */}
       <div className="grid grid-cols-2 border border-slate-200 bg-white mb-6">
-        <button
-          onClick={() => switchMode('signin')}
+        <button onClick={() => switchMode('signin')}
           className={`py-2.5 text-xs font-mono font-bold tracking-widest transition ${
             !isSignup ? 'bg-cnv-navy text-white' : 'text-slate-500 hover:text-cnv-navy'
           }`}>
-          [SIGN_IN]
+          SIGN IN
         </button>
-        <button
-          onClick={() => switchMode('signup')}
+        <button onClick={() => switchMode('signup')}
           className={`py-2.5 text-xs font-mono font-bold tracking-widest transition ${
             isSignup ? 'bg-cnv-navy text-white' : 'text-slate-500 hover:text-cnv-navy'
           }`}>
-          [JOIN]
+          CREATE ACCOUNT
         </button>
       </div>
 
       {isSignup ? (
         <>
-          <div className="font-mono text-[10px] tracking-[0.3em] text-cnv-navy/70">▸ NEW_MEMBER</div>
-          <h1 className="text-2xl font-bold mt-1">Join the club.</h1>
-          <p className="text-sm text-slate-600 mt-1">Enter your name and email — we'll send you a magic link to get started.</p>
+          <h1 className="text-2xl font-bold">New here?</h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Enter your name and email. We'll send you a link — click it and your account is ready.
+          </p>
         </>
       ) : (
         <>
-          <div className="font-mono text-[10px] tracking-[0.3em] text-cnv-navy/70">▸ WELCOME_BACK</div>
-          <h1 className="text-2xl font-bold mt-1">Sign in.</h1>
-          <p className="text-sm text-slate-600 mt-1">Enter your email and we'll send you a magic link.</p>
+          <h1 className="text-2xl font-bold">Welcome back.</h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Enter your email and we'll send you a one-click sign-in link. No password needed.
+          </p>
         </>
       )}
 
       {sent ? (
-        <div className="mt-6 border border-emerald-400 bg-emerald-50 p-4 text-sm font-mono text-emerald-800">
-          ▸ LINK_SENT — check your inbox and tap the link from this device.
+        <div className="mt-6 border border-emerald-400 bg-emerald-50 p-4 font-mono text-emerald-800">
+          <div className="text-sm font-bold">Check your inbox.</div>
+          <div className="text-xs mt-1 text-emerald-700">
+            We sent a link to <span className="font-bold">{email}</span>. Tap it to {isSignup ? 'activate your account' : 'sign in'}.
+          </div>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
+        <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-3">
           {isSignup && (
             <label className="text-[10px] font-mono tracking-widest text-slate-500">
               YOUR NAME
@@ -121,10 +123,9 @@ function AuthForm() {
             </label>
           )}
           <label className="text-[10px] font-mono tracking-widest text-slate-500">
-            EMAIL
+            EMAIL ADDRESS
             <input
-              required
-              type="email"
+              required type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               autoFocus={!isSignup}
@@ -133,16 +134,19 @@ function AuthForm() {
             />
           </label>
 
-          <button
-            disabled={busy}
+          <button disabled={busy}
             className="mt-2 bg-cnv-navy text-white py-3 font-mono font-bold tracking-widest hover:bg-cnv-navy-3 disabled:opacity-40">
-            {busy ? '▸ SENDING…' : '▸ EMAIL_ME_A_LINK'}
+            {busy
+              ? '▸ SENDING…'
+              : isSignup
+                ? '▸ CREATE MY ACCOUNT'
+                : '▸ SEND SIGN-IN LINK'}
           </button>
 
-          {err && <p className="text-red-700 text-xs font-mono">▸ {err}</p>}
+          {err && <p className="text-red-700 text-xs font-mono mt-1">▸ {err}</p>}
 
           <p className="text-center text-[10px] font-mono text-slate-400 tracking-widest mt-1">
-            NO_PASSWORD · MAGIC_LINK · FREE
+            NO PASSWORD · MAGIC LINK · FREE
           </p>
         </form>
       )}
