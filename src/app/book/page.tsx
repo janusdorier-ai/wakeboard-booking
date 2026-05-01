@@ -11,10 +11,13 @@ export default async function BookPage({ searchParams }: { searchParams: SearchP
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: config }, { data: bookings }, { data: override }] = await Promise.all([
+  const [{ data: config }, { data: bookings }, { data: override }, { data: profile }] = await Promise.all([
     supabase.from('club_config').select('*').eq('id', 1).single(),
     supabase.from('bookings').select('*').eq('date', date).neq('status', 'cancelled').order('start_time'),
     supabase.from('day_overrides').select('*').eq('date', date).maybeSingle(),
+    user
+      ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : Promise.resolve({ data: null }),
   ])
 
   // Build a 7-day quick-picker
@@ -41,6 +44,7 @@ INSERT INTO public.club_config (id) VALUES (1) ON CONFLICT DO NOTHING;
     <BookingClient
       key={date}
       currentUserId={user?.id ?? null}
+      currentUserName={(profile as { full_name?: string } | null)?.full_name ?? null}
       date={date}
       days={days}
       config={config}

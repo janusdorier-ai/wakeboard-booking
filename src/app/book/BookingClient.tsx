@@ -10,6 +10,7 @@ import type { Booking, BookingMember, ClubConfig, Period, CandidateSlot } from '
 
 interface Props {
   currentUserId: string | null
+  currentUserName: string | null
   date: string
   days: { date: string; label: string }[]
   config: ClubConfig
@@ -17,7 +18,7 @@ interface Props {
   override: { am_open: boolean; pm_open: boolean; note: string | null } | null
 }
 
-export function BookingClient({ currentUserId, date, days, config, initialBookings, override }: Props) {
+export function BookingClient({ currentUserId, currentUserName, date, days, config, initialBookings, override }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [bookings, setBookings] = useState<Booking[]>(initialBookings)
@@ -26,6 +27,7 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
   const [picked, setPicked] = useState<CandidateSlot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [showHowTo, setShowHowTo] = useState(false)
 
   useEffect(() => {
     const ids = bookings.map(b => b.id)
@@ -101,12 +103,15 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
     else setPicked(null)
   }
 
+  const displayName = currentUserName ? currentUserName.split(' ')[0] : null
+
   return (
     <main className="min-h-screen bg-slate-50 text-cnv-navy relative overflow-hidden">
       <div className="absolute inset-0 cnv-grid pointer-events-none" />
       <div className="absolute inset-0 cnv-grid-lines pointer-events-none" />
 
       <div className="relative max-w-md mx-auto p-5">
+        {/* ── Header ── */}
         <header className="flex items-center justify-between border-b border-slate-200 pb-4">
           <Link href="/" className="flex items-center gap-3">
             <CnvMark className="h-12 w-auto" />
@@ -115,17 +120,26 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
               <h1 className="text-lg font-bold mt-0.5">Booking Console</h1>
             </div>
           </Link>
-          <Link href="/me" className="font-mono text-[10px] tracking-widest text-slate-500 hover:text-cnv-navy">
-            [MY_BOOKINGS]
-          </Link>
+          <div className="flex flex-col items-end gap-1">
+            {displayName && (
+              <span className="font-mono text-[10px] tracking-widest text-cnv-navy/70 font-bold">
+                {displayName.toUpperCase()}
+              </span>
+            )}
+            <Link href="/me" className="font-mono text-[10px] tracking-widest text-slate-500 hover:text-cnv-navy">
+              [MY_SLOTS]
+            </Link>
+          </div>
         </header>
 
+        {/* ── Stats ── */}
         <div className="grid grid-cols-3 gap-2 mt-5 font-mono">
           <Stat label="ACTIVE" value={String(filled).padStart(2,'0')} />
           <Stat label="RIDERS" value={String(totalRiders).padStart(2,'0')} />
           <Stat label="OPEN"   value={String(visible.length - filled).padStart(2,'0')} />
         </div>
 
+        {/* ── Day picker ── */}
         <div className="mt-5 flex gap-1 overflow-x-auto pb-2 -mx-5 px-5">
           {days.map(d => (
             <button key={d.date}
@@ -140,6 +154,7 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
           ))}
         </div>
 
+        {/* ── AM / PM toggle ── */}
         <div className="mt-3 grid grid-cols-2 border border-slate-200 bg-white">
           {(['AM','PM'] as Period[]).map(p => (
             <button key={p}
@@ -152,6 +167,29 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
           ))}
         </div>
 
+        {/* ── How to book (collapsible) ── */}
+        <div className="mt-3">
+          <button
+            onClick={() => setShowHowTo(v => !v)}
+            className="w-full text-left font-mono text-[10px] tracking-[0.3em] text-slate-400 hover:text-cnv-navy flex items-center gap-2 py-1">
+            <span>{showHowTo ? '▾' : '▸'} HOW_TO_BOOK [?]</span>
+          </button>
+          {showHowTo && (
+            <div className="border border-slate-200 bg-white p-4 text-xs font-mono text-slate-600 space-y-2">
+              <p><b className="text-cnv-navy">Tap any slot</b> to hold it. You can hold multiple times — like a Doodle.</p>
+              <p>A second waker joins your slot → it <b className="text-emerald-600">confirms</b> and the boat goes out.</p>
+              <p>Within <b className="text-cnv-navy">24h</b> of the session, only slots near existing bookings are visible — the boat runs one block, not scattered all day.</p>
+              <div className="pt-1 grid grid-cols-2 gap-y-1.5 gap-x-3">
+                <LegendRow cls="bg-orange-400"  label="NEEDS_BUDDY (1/4)" />
+                <LegendRow cls="bg-emerald-500" label="CONFIRMED (2–3/4)" />
+                <LegendRow cls="bg-purple-400"  label="FULL (4/4)" />
+                <LegendRow cls="bg-cyan-400"    label="CLUSTER_OK (free)" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Closed notice ── */}
         {!periodOpen && (
           <div className="mt-4 border border-purple-300 bg-purple-50 p-3 text-xs font-mono text-purple-800">
             ▸ {period === 'AM' ? 'MORNING' : 'AFTERNOON'} SESSION CLOSED BY CLUB
@@ -159,48 +197,64 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
           </div>
         )}
 
+        {/* ── Slot grid ── */}
         {periodOpen && (
-          <div className="mt-4 grid grid-cols-3 gap-1.5">
-            {visible.map(s => {
-              const isMine = s.booking && s.members?.some(m => m.user_id === currentUserId)
-              return (
-                <button key={s.start_time}
-                  disabled={s.state === 'full' && !isMine}
-                  onClick={() => setPicked(s)}
-                  className={`p-3 text-left font-mono border transition ${SLOT_BG[s.state]} ${
-                    isMine ? 'ring-2 ring-cnv-yellow ring-offset-2 ring-offset-slate-50' : ''
-                  }`}>
-                  <div className="text-xl font-bold tabular-nums leading-none">{s.start_time}</div>
-                  <div className="text-[9px] opacity-80 mt-1.5 tracking-widest">{SLOT_LABEL[s.state]}</div>
-                  {s.booking && (
-                    <>
-                      <div className="mt-2 flex gap-0.5">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className={`h-1.5 w-full ${i < s.booking!.member_count ? 'bg-current' : 'bg-current/20'}`} />
-                        ))}
-                      </div>
-                      {s.members && s.members.length > 0 && (
-                        <div className="mt-1.5 text-[9px] tracking-widest opacity-80 truncate">
-                          {s.members.map(m => initials(m.full_name)).join('·')}
-                        </div>
+          <>
+            {visible.length === 0 ? (
+              <div className="mt-4 border border-dashed border-slate-300 bg-white p-6 text-center font-mono">
+                <div className="text-[10px] tracking-[0.3em] text-slate-400">▸ NO_SLOTS_VISIBLE</div>
+                <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                  Within 24h of session start, slots cluster around existing bookings.
+                  Check another time or come back when the session is further out.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-3 gap-1.5">
+                {visible.map(s => {
+                  const isMine = s.booking && s.members?.some(m => m.user_id === currentUserId)
+                  return (
+                    <button key={s.start_time}
+                      disabled={s.state === 'full' && !isMine}
+                      onClick={() => setPicked(s)}
+                      className={`p-3 text-left font-mono border transition ${SLOT_BG[s.state]} ${
+                        isMine ? 'ring-2 ring-cnv-yellow ring-offset-2 ring-offset-slate-50' : ''
+                      }`}>
+                      <div className="text-xl font-bold tabular-nums leading-none">{s.start_time}</div>
+                      <div className="text-[9px] opacity-70 mt-1 tracking-widest">{SLOT_LABEL[s.state]}</div>
+                      {s.booking && (
+                        <>
+                          {/* Fill bars */}
+                          <div className="mt-2 flex gap-0.5">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className={`h-1.5 w-full ${i < s.booking!.member_count ? 'bg-current' : 'bg-current/20'}`} />
+                            ))}
+                          </div>
+                          {/* Rider first names — the key social hook */}
+                          {s.members && s.members.length > 0 && (
+                            <div className="mt-1.5 text-[9px] tracking-wide leading-tight font-semibold">
+                              {s.members.map(m => firstName(m.full_name)).join(' · ')}
+                            </div>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
 
-        <div className="mt-5 grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-600 border border-slate-200 bg-white p-3">
-          <Legend cls="bg-orange-400"  label="NEEDS_BUDDY" />
-          <Legend cls="bg-emerald-500" label="OPEN_SPOTS" />
-          <Legend cls="bg-purple-400"  label="CAPACITY" />
-          <Legend cls="bg-cyan-400"    label="CLUSTER_OK" />
+        {/* ── Compact legend (always visible) ── */}
+        <div className="mt-5 grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-500 border border-slate-200 bg-white p-3">
+          <LegendRow cls="bg-orange-400"  label="NEEDS_BUDDY" />
+          <LegendRow cls="bg-emerald-500" label="CONFIRMED" />
+          <LegendRow cls="bg-purple-400"  label="FULL" />
+          <LegendRow cls="bg-cyan-400"    label="CLUSTER_OK" />
         </div>
       </div>
 
-      {/* Bottom sheet */}
+      {/* ── Bottom sheet ── */}
       {picked && (
         <div className="fixed inset-0 z-50 flex items-end bg-cnv-navy/40" onClick={() => setPicked(null)}>
           <div className="w-full bg-white border-t-2 border-cnv-yellow p-5 font-mono text-cnv-navy shadow-2xl"
@@ -212,24 +266,33 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
                 {date} · {period} · {picked.start_time}
               </div>
 
-              {picked.booking && (
+              {picked.booking ? (
                 <div className="mt-3 text-xs">
-                  <div className="text-slate-500">CREW · {picked.booking.member_count}/4 · ENDS {picked.booking.end_time.slice(0,5)}</div>
-                  <ul className="mt-2 space-y-1">
+                  <div className="text-slate-500 tracking-widest">
+                    CREW · {picked.booking.member_count}/4 · ENDS {picked.booking.end_time.slice(0,5)}
+                  </div>
+                  <ul className="mt-3 space-y-1.5">
                     {picked.members?.map(m => (
                       <li key={m.user_id} className="flex items-center gap-2">
-                        <span className="inline-block h-1.5 w-1.5 bg-cnv-navy" />
-                        {m.full_name ?? m.user_id.slice(0, 6)}
-                        {m.user_id === currentUserId && <span className="text-cnv-yellow font-bold">[YOU]</span>}
+                        {/* Avatar chip */}
+                        <span className="inline-flex h-7 w-7 items-center justify-center bg-cnv-navy text-white text-[10px] font-bold shrink-0">
+                          {initials(m.full_name)}
+                        </span>
+                        <span className="font-semibold text-sm">
+                          {m.full_name ?? m.user_id.slice(0, 8)}
+                        </span>
+                        {m.user_id === currentUserId && (
+                          <span className="ml-auto text-[9px] tracking-widest text-cnv-yellow font-bold border border-cnv-yellow px-1.5 py-0.5">YOU</span>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
-              )}
-              {!picked.booking && (
-                <p className="mt-3 text-xs text-slate-600">
-                  ▸ FIRST_RIDER. Slot confirms once a second waker joins.
-                </p>
+              ) : (
+                <div className="mt-3 text-xs text-slate-600 space-y-1 leading-relaxed">
+                  <p>▸ <b>FIRST_RIDER</b> — you'll hold this slot.</p>
+                  <p className="text-slate-400">Slot confirms once a second waker joins. Solo holds expire after 48h.</p>
+                </div>
               )}
 
               {error && <p className="mt-3 text-xs text-red-700">▸ ERR: {error}</p>}
@@ -248,7 +311,7 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
                     {picked.booking ? '▸ JOIN_SLOT' : '▸ HOLD_SLOT'}
                   </button>
                 )}
-                <button onClick={() => setPicked(null)}
+                <button onClick={() => { setPicked(null); setError(null) }}
                   className="border border-slate-300 text-slate-600 px-4 py-3 text-sm tracking-widest hover:text-cnv-navy">
                   CANCEL
                 </button>
@@ -261,6 +324,8 @@ export function BookingClient({ currentUserId, date, days, config, initialBookin
   )
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="border border-slate-200 bg-white p-3">
@@ -270,10 +335,18 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Legend({ cls, label }: { cls: string; label: string }) {
-  return <div className="flex items-center gap-2"><span className={`inline-block h-2 w-2 ${cls}`} />{label}</div>
+function LegendRow({ cls, label }: { cls: string; label: string }) {
+  return <div className="flex items-center gap-2"><span className={`inline-block h-2 w-2 shrink-0 ${cls}`} />{label}</div>
 }
 
+/** First name only — used on slot cards for quick friend recognition */
+function firstName(name?: string): string {
+  if (!name) return '?'
+  const first = name.trim().split(/\s+/)[0]
+  return first ? first : '?'
+}
+
+/** Two-letter initials — used in avatar chips in the bottom sheet */
 function initials(name?: string): string {
   if (!name) return '··'
   const parts = name.trim().split(/\s+/).filter(Boolean)
