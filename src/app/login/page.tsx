@@ -45,7 +45,7 @@ function LoginForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true); setErr(null)
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    const origin = window.location.origin   // always the actual domain (local or prod)
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
