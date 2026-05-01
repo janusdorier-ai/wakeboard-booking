@@ -49,9 +49,13 @@ export default async function Home() {
             </>
           ) : (
             <>
-              <Link href="/login"
+              <Link href="/login?mode=signup"
                 className="bg-cnv-navy text-white py-3.5 text-center font-mono font-bold tracking-widest hover:bg-cnv-navy-3">
-                ▸ SIGN_IN_TO_BOOK
+                ▸ JOIN_THE_CLUB
+              </Link>
+              <Link href="/login"
+                className="border border-slate-300 bg-white py-3.5 text-center font-mono text-slate-600 tracking-widest hover:text-cnv-navy hover:border-cnv-navy/40">
+                [ALREADY_A_MEMBER?_SIGN_IN]
               </Link>
               <p className="text-[10px] font-mono text-slate-400 tracking-widest text-center">
                 MAGIC_LINK · NO_PASSWORD · FREE
