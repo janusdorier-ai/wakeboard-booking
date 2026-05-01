@@ -32,17 +32,28 @@ export function BookingClient({ currentUserId, currentUserName, date, days, conf
   useEffect(() => {
     const ids = bookings.map(b => b.id)
     if (ids.length === 0) { setMembers({}); return }
+
+    // booking_members.user_id → auth.users (no direct FK to profiles),
+    // so PostgREST can't do the join inline. Two-step instead.
     supabase
       .from('booking_members')
-      .select('booking_id, user_id, profiles(full_name)')
+      .select('booking_id, user_id')
       .in('booking_id', ids)
-      .then(({ data }) => {
+      .then(async ({ data: memberRows }) => {
+        if (!memberRows || memberRows.length === 0) { setMembers({}); return }
+        const userIds = [...new Set((memberRows as any[]).map(r => r.user_id))]
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds)
+        const nameMap: Record<string, string> = {}
+        for (const p of (profileRows ?? []) as any[]) nameMap[p.id] = p.full_name
         const grouped: Record<string, BookingMember[]> = {}
-        for (const row of (data ?? []) as any[]) {
+        for (const row of memberRows as any[]) {
           const m: BookingMember = {
             booking_id: row.booking_id,
             user_id: row.user_id,
-            full_name: row.profiles?.full_name,
+            full_name: nameMap[row.user_id],
           }
           ;(grouped[m.booking_id] ??= []).push(m)
         }

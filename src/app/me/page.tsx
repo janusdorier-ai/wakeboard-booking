@@ -27,21 +27,29 @@ export default async function MyBookingsPage() {
     .filter((b: any) => b && b.status !== 'cancelled' && b.date >= today)
     .sort((a: any, b: any) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))
 
-  // Fetch members for all upcoming bookings
+  // Fetch members for all upcoming bookings — two-step because
+  // booking_members.user_id → auth.users (no FK to profiles).
   const bookingIds = upcoming.map((b: any) => b.id)
   const { data: memberRows } = bookingIds.length > 0
     ? await supabase
         .from('booking_members')
-        .select('booking_id, user_id, profiles(full_name)')
+        .select('booking_id, user_id')
         .in('booking_id', bookingIds)
     : { data: [] }
 
   const membersByBooking: Record<string, { user_id: string; full_name?: string }[]> = {}
-  for (const row of (memberRows ?? []) as any[]) {
-    ;(membersByBooking[row.booking_id] ??= []).push({
-      user_id: row.user_id,
-      full_name: row.profiles?.full_name,
-    })
+  if (memberRows && memberRows.length > 0) {
+    const userIds = [...new Set((memberRows as any[]).map((r: any) => r.user_id))]
+    const { data: profileRows } = await supabase
+      .from('profiles').select('id, full_name').in('id', userIds)
+    const nameMap: Record<string, string> = {}
+    for (const p of (profileRows ?? []) as any[]) nameMap[p.id] = p.full_name
+    for (const row of memberRows as any[]) {
+      ;(membersByBooking[row.booking_id] ??= []).push({
+        user_id: row.user_id,
+        full_name: nameMap[row.user_id],
+      })
+    }
   }
 
   const statusBadge = (s: string) => ({
