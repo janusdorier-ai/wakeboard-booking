@@ -13,23 +13,35 @@ export default async function AdminPage() {
     { data: privateConfig },
     { data: bookings },
     { data: overrides },
-    { data: members },
+    { data: memberRows },
+    { data: profilesAll },
   ] = await Promise.all([
     supabase.from('club_config').select('*').eq('id', 1).single(),
     supabase.from('private_config').select('*').eq('id', 1).maybeSingle(),
-    supabase.from('bookings').select('*').gte('date', today).lte('date', horizon)
-      .neq('status', 'cancelled').order('date').order('start_time'),
+    supabase.from('bookings').select('*')
+      .gte('date', today).lte('date', horizon)
+      .neq('status', 'cancelled')
+      .order('date').order('start_time'),
     supabase.from('day_overrides').select('*').gte('date', today),
-    supabase.from('booking_members').select('booking_id, user_id, profiles(full_name)'),
+    // Fetch raw member rows — two-step because user_id → auth.users, not profiles
+    supabase.from('booking_members').select('booking_id, user_id'),
+    supabase.from('profiles').select('id, full_name, role, created_at').order('full_name'),
   ])
 
-  // Group members by booking_id for the AdminClient.
+  // Two-step: resolve user_id → full_name via profiles table
   const membersByBooking: Record<string, { user_id: string; full_name: string | null }[]> = {}
-  for (const row of (members ?? []) as any[]) {
-    ;(membersByBooking[row.booking_id] ??= []).push({
-      user_id: row.user_id,
-      full_name: row.profiles?.full_name ?? null,
-    })
+  if (memberRows && memberRows.length > 0) {
+    const userIds = [...new Set((memberRows as any[]).map(r => r.user_id))]
+    const { data: nameRows } = await supabase
+      .from('profiles').select('id, full_name').in('id', userIds)
+    const nameMap: Record<string, string> = {}
+    for (const p of (nameRows ?? []) as any[]) nameMap[p.id] = p.full_name
+    for (const row of memberRows as any[]) {
+      ;(membersByBooking[row.booking_id] ??= []).push({
+        user_id:   row.user_id,
+        full_name: nameMap[row.user_id] ?? null,
+      })
+    }
   }
 
   return (
@@ -39,6 +51,7 @@ export default async function AdminPage() {
       bookings={bookings ?? []}
       overrides={overrides ?? []}
       membersByBooking={membersByBooking}
+      profiles={(profilesAll ?? []) as any[]}
       todayDate={today}
       tomorrowDate={tomorrow}
     />

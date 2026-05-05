@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { CnvMark } from '@/components/CnvMark'
 import { SignOutButton } from '@/components/SignOutButton'
+import { LeaveSlotButton } from '@/components/LeaveSlotButton'
 
 export default async function MyBookingsPage() {
   const supabase = createClient()
@@ -27,8 +28,7 @@ export default async function MyBookingsPage() {
     .filter((b: any) => b && b.status !== 'cancelled' && b.date >= today)
     .sort((a: any, b: any) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))
 
-  // Fetch members for all upcoming bookings — two-step because
-  // booking_members.user_id → auth.users (no FK to profiles).
+  // Two-step member lookup
   const bookingIds = upcoming.map((b: any) => b.id)
   const { data: memberRows } = bookingIds.length > 0
     ? await supabase
@@ -46,87 +46,120 @@ export default async function MyBookingsPage() {
     for (const p of (profileRows ?? []) as any[]) nameMap[p.id] = p.full_name
     for (const row of memberRows as any[]) {
       ;(membersByBooking[row.booking_id] ??= []).push({
-        user_id: row.user_id,
+        user_id:   row.user_id,
         full_name: nameMap[row.user_id],
       })
     }
   }
 
-  const statusBadge = (s: string) => ({
-    pending:   'bg-orange-50 border-orange-400 text-orange-700',
-    confirmed: 'bg-emerald-50 border-emerald-500 text-emerald-700',
-    full:      'bg-purple-50 border-purple-400 text-purple-700',
-  } as Record<string, string>)[s] ?? 'border-slate-200'
+  const statusStyle = (s: string) => ({
+    pending:   'border-amber-400/40 text-amber-300 bg-amber-400/10',
+    confirmed: 'border-emerald-400/40 text-emerald-300 bg-emerald-400/10',
+    full:      'border-violet-400/40 text-violet-300 bg-violet-400/10',
+  } as Record<string, string>)[s] ?? 'border-white/20 text-slate-400'
+
+  const statusLabel = (s: string) => ({
+    pending:   'Needs a buddy',
+    confirmed: 'Session on!',
+    full:      'Full crew',
+  } as Record<string, string>)[s] ?? s
 
   return (
-    <main className="min-h-screen bg-slate-50 text-cnv-navy relative overflow-hidden">
-      <div className="absolute inset-0 cnv-grid pointer-events-none" />
+    <main className="min-h-screen relative overflow-hidden">
+      <div className="absolute inset-0 cnv-bg pointer-events-none" />
       <div className="absolute inset-0 cnv-grid-lines pointer-events-none" />
 
-      <div className="relative max-w-md mx-auto p-5">
-        <header className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <Link href="/book" className="flex items-center gap-3">
-            <CnvMark className="h-12 w-auto" />
+      <div className="relative max-w-md mx-auto px-4 py-5 pb-10">
+
+        {/* ── Header ── */}
+        <header className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+          <Link href="/book" className="flex items-center gap-3 group">
+            <CnvMark className="h-10 w-auto opacity-80 group-hover:opacity-100 transition" />
             <div>
-              <div className="font-mono text-[10px] tracking-[0.3em] text-cnv-navy/70">SKI ▸ WAKEBOARD</div>
-              <h1 className="text-lg font-bold mt-0.5">
-                {firstName ? `${firstName}'s Slots` : 'My Bookings'}
+              <div className="font-mono text-[9px] tracking-[0.35em] text-cnv-yellow/60">
+                CNV · VERSOIX
+              </div>
+              <h1 className="font-display text-base font-bold text-white mt-0.5">
+                {firstName ? `${firstName}'s slots` : 'My bookings'}
               </h1>
             </div>
           </Link>
           <div className="flex flex-col items-end gap-1.5">
-            <Link href="/book" className="font-mono text-[10px] tracking-widest text-slate-500 hover:text-cnv-navy">
-              [BOOK_MORE]
+            <Link href="/book" className="font-mono text-[10px] tracking-widest text-slate-500 hover:text-cnv-yellow transition">
+              Book a slot
             </Link>
             <SignOutButton />
           </div>
         </header>
 
+        {/* ── Account info chip ── */}
         {displayName && (
-          <div className="mt-4 border border-slate-200 bg-white p-3 font-mono text-xs flex items-center justify-between">
+          <div className="mt-4 border border-white/[0.08] bg-white/[0.03] px-4 py-3 flex items-center justify-between">
             <div>
-              <div className="text-[9px] tracking-widest text-slate-400">SIGNED_IN_AS</div>
-              <div className="font-bold text-cnv-navy mt-0.5">{displayName}</div>
+              <div className="font-mono text-[9px] tracking-[0.25em] text-slate-500 mb-0.5">SIGNED IN AS</div>
+              <div className="font-bold text-white text-sm">{displayName}</div>
             </div>
-            <div className="text-[9px] tracking-widest text-slate-400 truncate max-w-[140px] text-right">
+            <div className="font-mono text-[9px] text-slate-500 truncate max-w-[140px] text-right">
               {user.email}
             </div>
           </div>
         )}
 
+        {/* ── Empty state ── */}
         {upcoming.length === 0 && (
-          <div className="mt-8 border border-slate-200 bg-white p-6 text-center font-mono text-sm text-slate-500">
-            ▸ NO_UPCOMING_SLOTS
-            <Link href="/book" className="block mt-3 text-cnv-navy tracking-widest font-bold">[PICK_ONE_→]</Link>
+          <div className="mt-10 border border-dashed border-white/[0.10] bg-white/[0.02] p-8 text-center font-mono">
+            <div className="text-[10px] tracking-[0.3em] text-slate-500">No upcoming slots</div>
+            <Link
+              href="/book"
+              className="inline-block mt-4 px-5 py-2.5 bg-cnv-yellow text-cnv-navy-4 text-xs font-bold tracking-widest hover:shadow-glow-yellow-sm transition">
+              Browse the grid →
+            </Link>
           </div>
         )}
 
-        <ul className="mt-5 flex flex-col gap-2">
+        {/* ── Booking cards ── */}
+        <ul className="mt-5 flex flex-col gap-3">
           {upcoming.map((b: any) => {
-            const crew = membersByBooking[b.id] ?? []
+            const crew      = membersByBooking[b.id] ?? []
+            const humanDate = format(parseISO(b.date), 'EEE d MMM')
             return (
-              <li key={b.id} className="border border-slate-200 bg-white p-4 font-mono">
-                <div className="flex items-baseline justify-between">
-                  <div className="text-xl font-bold tabular-nums">{b.date}</div>
-                  <div className="text-[10px] tracking-widest text-slate-500">[{b.period}]</div>
+              <li
+                key={b.id}
+                className="border border-white/[0.08] bg-white/[0.03] p-4 font-mono">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-display text-lg font-bold text-white leading-tight">
+                      {humanDate}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1 tabular-nums">
+                      {b.period === 'AM' ? 'Morning' : 'Afternoon'}
+                      {' · '}
+                      {b.start_time.slice(0, 5)}–{b.end_time.slice(0, 5)}
+                      {' · '}
+                      {b.member_count}/4 riders
+                    </div>
+                  </div>
+                  <LeaveSlotButton bookingId={b.id} />
                 </div>
-                <div className="mt-1 text-sm text-slate-500 tabular-nums">
-                  {b.start_time.slice(0,5)} – {b.end_time.slice(0,5)} · {b.member_count}/4 wakers
+
+                {/* Status badge */}
+                <div className={`mt-3 inline-block border px-2.5 py-1 text-[10px] tracking-wide ${statusStyle(b.status)}`}>
+                  {statusLabel(b.status)}
                 </div>
-                <div className={`mt-2 inline-block border px-2 py-0.5 text-[10px] tracking-widest uppercase ${statusBadge(b.status)}`}>
-                  {b.status}
-                </div>
+
+                {/* Crew chips */}
                 {crew.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {crew.map(m => (
-                      <span key={m.user_id}
-                        className={`text-[10px] font-bold tracking-wide px-1.5 py-0.5 border ${
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {crew.map((m: any) => (
+                      <span
+                        key={m.user_id}
+                        className={`text-[10px] font-bold tracking-wide px-2 py-1 border ${
                           m.user_id === user.id
-                            ? 'bg-cnv-yellow/20 border-cnv-yellow text-cnv-navy'
-                            : 'bg-slate-50 border-slate-200 text-slate-600'
+                            ? 'bg-cnv-yellow/15 border-cnv-yellow/50 text-cnv-yellow'
+                            : 'bg-white/[0.05] border-white/[0.10] text-slate-300'
                         }`}>
                         {m.full_name?.split(' ')[0] ?? '?'}
-                        {m.user_id === user.id && ' ·YOU'}
+                        {m.user_id === user.id && ' · you'}
                       </span>
                     ))}
                   </div>

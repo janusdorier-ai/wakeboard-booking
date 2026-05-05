@@ -1,20 +1,36 @@
 import type { SlotState } from './types'
 
-// Light-theme status colors. Yellow + red are reserved for CNV branding.
+// Dark-theme status styles — CNV Midnight Regatta
 export const SLOT_BG: Record<SlotState, string> = {
-  pending:   'bg-orange-50 border-orange-400 text-orange-700',
-  confirmed: 'bg-emerald-50 border-emerald-500 text-emerald-700',
-  full:      'bg-purple-50 border-purple-400 text-purple-700 cursor-not-allowed',
-  available: 'bg-white border-slate-200 text-slate-600 hover:border-cnv-yellow',
-  adjacent:  'bg-cyan-50 border-cyan-400 text-cyan-700',
-  hidden:    'hidden',
+  // Orange/amber — solo waker waiting for a buddy
+  pending:
+    'bg-amber-400/[0.12] border border-amber-400/30 text-amber-300',
+
+  // Emerald — session confirmed, come join
+  confirmed:
+    'bg-emerald-400/[0.12] border border-emerald-400/30 text-emerald-300',
+
+  // Violet — 4/4, boat is full
+  full:
+    'bg-violet-500/[0.12] border border-violet-400/25 text-violet-300 cursor-not-allowed',
+
+  // Ghost — open, no cluster yet
+  available:
+    'bg-white/[0.03] border border-white/[0.07] text-slate-500 ' +
+    'hover:border-cnv-yellow/40 hover:text-slate-300 hover:bg-cnv-yellow/[0.04] transition',
+
+  // Cyan — within cluster window, encouraged to pick
+  adjacent:
+    'bg-cyan-400/[0.12] border border-cyan-400/30 text-cyan-300',
+
+  hidden: 'hidden',
 }
 
 export const SLOT_LABEL: Record<SlotState, string> = {
-  pending:   'NEEDS_BUDDY',
-  confirmed: 'OPEN_SPOTS',
-  full:      'CAPACITY',
-  available: 'OPEN',
-  adjacent:  'CLUSTER_OK',
+  pending:   'Needs a buddy',
+  confirmed: 'Join us!',
+  full:      'Full',
+  available: 'Open',
+  adjacent:  'Available',
   hidden:    '',
 }

@@ -12,8 +12,8 @@ export default function AuthCallbackPage() {
 }
 
 function CallbackHandler() {
-  const router  = useRouter()
-  const params  = useSearchParams()
+  const router = useRouter()
+  const params = useSearchParams()
 
   useEffect(() => {
     const supabase = createClient()
@@ -22,22 +22,15 @@ function CallbackHandler() {
 
     async function finish() {
       if (code) {
-        // PKCE flow — exchange the one-time code for a session
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (error) {
           router.replace('/login?error=auth')
           return
         }
       }
-      // Implicit flow: createBrowserClient automatically picks up
-      // access_token / refresh_token from the URL hash — no extra work needed.
-      // Either way, wait a tick then check we actually have a session.
       const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.replace(next)
-      } else {
-        router.replace('/login?error=auth')
-      }
+      if (session) router.replace(next)
+      else router.replace('/login?error=auth')
     }
 
     finish()
@@ -48,9 +41,15 @@ function CallbackHandler() {
 
 function Spinner() {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center font-mono text-cnv-navy">
-      <div className="text-center">
-        <div className="text-[10px] tracking-[0.3em] text-cnv-navy/60 animate-pulse">▸ SIGNING_IN…</div>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="absolute inset-0 cnv-bg pointer-events-none" />
+      <div className="relative text-center font-mono">
+        <div className="text-cnv-yellow/80 text-sm font-bold tracking-widest animate-glow">
+          ▸
+        </div>
+        <div className="mt-3 text-[10px] tracking-[0.35em] text-slate-500">
+          SIGNING IN
+        </div>
       </div>
     </div>
   )
