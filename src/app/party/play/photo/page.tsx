@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getStoredToken } from '@/lib/party/client'
+import { GuestShell } from '@/components/party/GuestShell'
+import { CLIENT_THEME } from '@/lib/party/client-config'
 
 interface Mission { id: string; prompt: string }
 interface Photo { id: string; url: string; vote_count: number; player_name: string; is_own: boolean; has_voted: boolean }
@@ -69,9 +71,10 @@ export default function PhotoPage() {
   }
 
   return (
+    <GuestShell>
     <div className="space-y-6">
       <Link href="/party/play" className="inline-block text-sm font-semibold text-white/90">← Back</Link>
-      <h1 className="text-center text-2xl font-black text-white drop-shadow">📸 Photo Mission</h1>
+      <h1 className="text-center text-2xl font-black text-white drop-shadow">{CLIENT_THEME.games.photo.icon} {CLIENT_THEME.games.photo.title}</h1>
 
       <div className="rounded-3xl bg-white/95 p-6 shadow-xl">
         {loading && <p className="text-center text-slate-500">Loading…</p>}
@@ -95,7 +98,7 @@ export default function PhotoPage() {
                 <button
                   onClick={handleUpload}
                   disabled={uploading}
-                  className="w-full rounded-xl bg-fuchsia-600 py-3 text-lg font-bold text-white shadow-lg hover:bg-fuchsia-700 disabled:opacity-60"
+                  className="w-full rounded-xl bg-[var(--party-accent)] py-3 text-lg font-bold text-white shadow-lg hover:bg-[var(--party-accent-dark)] disabled:opacity-60"
                 >
                   {uploading ? 'Uploading…' : 'Submit photo (+25 pts)'}
                 </button>
@@ -103,8 +106,8 @@ export default function PhotoPage() {
             )}
 
             {myPhoto && (
-              <div className="mt-4 rounded-2xl border-2 border-fuchsia-400 p-3">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-fuchsia-600">Your submission</p>
+              <div className="mt-4 rounded-2xl border-2 border-[var(--party-accent)] p-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--party-accent)]">Your submission</p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={myPhoto.url} alt="Your submission" className="w-full rounded-xl object-cover" />
                 <p className="mt-2 text-center text-sm font-semibold text-slate-600">❤️ {myPhoto.vote_count} votes</p>
@@ -125,7 +128,7 @@ export default function PhotoPage() {
                 <button
                   onClick={() => vote(p.id)}
                   disabled={p.is_own || p.has_voted || votingId === p.id}
-                  className={`text-sm font-bold ${p.has_voted ? 'text-fuchsia-600' : 'text-slate-400'} disabled:opacity-60`}
+                  className={`text-sm font-bold ${p.has_voted ? 'text-[var(--party-accent)]' : 'text-slate-400'} disabled:opacity-60`}
                 >
                   ❤️ {p.vote_count}
                 </button>
@@ -135,5 +138,6 @@ export default function PhotoPage() {
         </div>
       )}
     </div>
+    </GuestShell>
   )
 }

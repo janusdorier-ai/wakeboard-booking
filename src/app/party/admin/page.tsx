@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import { CLIENT_THEME } from '@/lib/party/client-config'
 
 interface TriviaQ {
   id: string; question: string; options: string[]; correct_index: number
@@ -48,7 +49,7 @@ export default function PartyAdminPage() {
     return (
       <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
         <form onSubmit={verify} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow">
-          <h1 className="text-xl font-bold">Party admin</h1>
+          <h1 className="text-xl font-bold">{CLIENT_THEME.gameTitle} — Admin</h1>
           <input
             type="password"
             value={passInput}
@@ -95,7 +96,10 @@ function AdminConsole({ passcode }: { passcode: string }) {
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-black">🎉 Party admin console</h1>
+        <div>
+          <h1 className="text-2xl font-black">🌊 {CLIENT_THEME.gameTitle} — Admin</h1>
+          <p className="text-sm text-slate-500">{CLIENT_THEME.clientName} · {CLIENT_THEME.eventName}</p>
+        </div>
         <p className="text-sm text-slate-500">{overview.totalPlayers} players joined</p>
       </header>
 
@@ -173,7 +177,7 @@ function TriviaSection({ passcode, questions, onChange }: {
   }
 
   return (
-    <SectionShell title="🧠 Trivia">
+    <SectionShell title={`${CLIENT_THEME.games.trivia.icon} ${CLIENT_THEME.games.trivia.title}`}>
       <ul className="mb-4 space-y-2">
         {questions.map((q) => (
           <li key={q.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
@@ -209,7 +213,7 @@ function TriviaSection({ passcode, questions, onChange }: {
           <input type="number" value={timeLimit} onChange={(e) => setTimeLimit(Number(e.target.value))}
             className="w-20 rounded-lg border border-slate-300 px-2 py-1" />
         </div>
-        <button disabled={saving} className="rounded-lg bg-fuchsia-600 px-4 py-2 font-semibold text-white disabled:opacity-60">
+        <button disabled={saving} className="rounded-lg bg-[var(--party-accent)] px-4 py-2 font-semibold text-white disabled:opacity-60">
           Add question
         </button>
       </form>
@@ -252,7 +256,7 @@ function PredictionSection({ passcode, predictions, onChange }: {
   }
 
   return (
-    <SectionShell title="🔮 Predictions">
+    <SectionShell title={`${CLIENT_THEME.games.predict.icon} ${CLIENT_THEME.games.predict.title}`}>
       <ul className="mb-4 space-y-2">
         {predictions.map((p) => (
           <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
@@ -271,7 +275,7 @@ function PredictionSection({ passcode, predictions, onChange }: {
                     onChange={(e) => setActualInputs((prev) => ({ ...prev, [p.id]: e.target.value }))}
                     className="w-28 rounded-lg border border-slate-300 px-2 py-1 text-sm"
                   />
-                  <button onClick={() => resolve(p.id)} className="rounded-lg bg-fuchsia-600 px-3 py-1 text-sm font-semibold text-white">Resolve & score</button>
+                  <button onClick={() => resolve(p.id)} className="rounded-lg bg-[var(--party-accent)] px-3 py-1 text-sm font-semibold text-white">Resolve & score</button>
                 </>
               )}
             </div>
@@ -285,7 +289,7 @@ function PredictionSection({ passcode, predictions, onChange }: {
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2" />
         <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit (optional)"
           className="w-32 rounded-lg border border-slate-300 px-3 py-2" />
-        <button className="rounded-lg bg-fuchsia-600 px-4 py-2 font-semibold text-white">Add</button>
+        <button className="rounded-lg bg-[var(--party-accent)] px-4 py-2 font-semibold text-white">Add</button>
       </form>
     </SectionShell>
   )
@@ -322,7 +326,7 @@ function PhotoSection({ passcode, missions, photos, onChange }: {
   }
 
   return (
-    <SectionShell title="📸 Photo missions">
+    <SectionShell title={`${CLIENT_THEME.games.photo.icon} ${CLIENT_THEME.games.photo.title}`}>
       <ul className="mb-4 space-y-2">
         {missions.map((m) => (
           <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3">
@@ -342,7 +346,7 @@ function PhotoSection({ passcode, missions, photos, onChange }: {
       <form onSubmit={create} className="mb-6 flex gap-2 border-t border-slate-100 pt-4">
         <input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Mission, e.g. Best sunset pose"
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2" />
-        <button className="rounded-lg bg-fuchsia-600 px-4 py-2 font-semibold text-white">Add</button>
+        <button className="rounded-lg bg-[var(--party-accent)] px-4 py-2 font-semibold text-white">Add</button>
       </form>
 
       {photos.length > 0 && (

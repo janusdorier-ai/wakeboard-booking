@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getStoredToken } from '@/lib/party/client'
+import { GuestShell } from '@/components/party/GuestShell'
+import { CLIENT_THEME } from '@/lib/party/client-config'
 
 type Phase = 'idle' | 'countdown' | 'active' | 'submitting' | 'result'
 
@@ -54,9 +56,10 @@ export default function ReflexPage() {
   }
 
   return (
+    <GuestShell>
     <div className="space-y-6">
       <Link href="/party/play" className="inline-block text-sm font-semibold text-white/90">← Back</Link>
-      <h1 className="text-center text-2xl font-black text-white drop-shadow">⚡ Reflex Tap</h1>
+      <h1 className="text-center text-2xl font-black text-white drop-shadow">{CLIENT_THEME.games.reflex.icon} {CLIENT_THEME.games.reflex.title}</h1>
 
       <div className="rounded-3xl bg-white/95 p-6 text-center shadow-xl">
         {phase === 'idle' && (
@@ -64,7 +67,7 @@ export default function ReflexPage() {
             <p className="mb-4 text-slate-600">Tap as fast as you can for {ROUND_SECONDS} seconds. Ready?</p>
             <button
               onClick={start}
-              className="rounded-xl bg-fuchsia-600 px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-fuchsia-700"
+              className="rounded-xl bg-[var(--party-accent)] px-8 py-4 text-lg font-bold text-white shadow-lg hover:bg-[var(--party-accent-dark)]"
             >
               Start
             </button>
@@ -72,7 +75,7 @@ export default function ReflexPage() {
         )}
 
         {phase === 'countdown' && (
-          <p className="text-6xl font-black text-fuchsia-600">{countdown === 0 ? 'GO!' : countdown}</p>
+          <p className="text-6xl font-black text-[var(--party-accent)]">{countdown === 0 ? 'GO!' : countdown}</p>
         )}
 
         {phase === 'active' && (
@@ -80,7 +83,7 @@ export default function ReflexPage() {
             <p className="mb-2 text-sm font-bold text-slate-500">{timeLeft.toFixed(1)}s left</p>
             <button
               onClick={() => setTaps((t) => t + 1)}
-              className="h-48 w-48 select-none rounded-full bg-gradient-to-br from-fuchsia-500 to-orange-400 text-3xl font-black text-white shadow-2xl active:scale-95"
+              className="h-48 w-48 select-none rounded-full bg-gradient-to-br from-[var(--party-accent)] to-[var(--party-grad-to)] text-3xl font-black text-white shadow-2xl active:scale-95"
             >
               TAP!
             </button>
@@ -94,7 +97,7 @@ export default function ReflexPage() {
           <>
             <p className="text-5xl font-black text-slate-900">{result.taps}</p>
             <p className="text-sm text-slate-500">taps</p>
-            <p className="mt-3 text-2xl font-bold text-fuchsia-600">+{result.points} pts</p>
+            <p className="mt-3 text-2xl font-bold text-[var(--party-accent)]">+{result.points} pts</p>
             <p className="mt-1 text-sm font-medium text-slate-500">
               {result.best ? '🎉 New best!' : 'That run wasn\'t better than your best — score kept.'}
             </p>
@@ -108,5 +111,6 @@ export default function ReflexPage() {
         )}
       </div>
     </div>
+    </GuestShell>
   )
 }

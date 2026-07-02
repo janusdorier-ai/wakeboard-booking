@@ -46,5 +46,3 @@ export interface PhotoWithMeta {
   is_own: boolean
   has_voted: boolean
 }
-
-export const AVATAR_CHOICES = ['🎉', '🌴', '🍹', '🕶️', '🎧', '🦩', '⭐', '🔥', '🌊', '🍉', '🎸', '🚀']

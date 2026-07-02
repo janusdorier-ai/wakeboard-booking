@@ -1,10 +1,19 @@
-# Party Game — Setup (MCI Summer Challenge)
+# Party Game — Setup (Making Waves)
 
-A live gamification layer for the MCI Group Geneva summer party: guests join
+A live gamification layer for MCI Group's Geneva summer party: guests join
 from their own phone via QR code, play four rounds, and watch their score and
 rank climb. No accounts, no app install. It reuses the same Supabase project
 as the wakeboard booking app but is otherwise fully independent (separate
 tables, separate `/party` routes).
+
+## Re-skinning for a different client
+
+Everything client-specific — name, event, tagline, colors, avatar emoji, and
+even the four game titles — lives in one file:
+`src/lib/party/client-config.ts`. To reuse this for another client's event,
+edit that file only; no other file needs to change. Colors are hex values
+consumed as CSS variables (`--party-accent`, `--party-grad-from`, etc.) by
+every themed page, so a new brand palette shows up everywhere immediately.
 
 ## 1. Run the migration
 

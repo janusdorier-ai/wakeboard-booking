@@ -22,7 +22,7 @@ export function PlayerHeader({ player, rank, totalPlayers }: {
         </div>
       </div>
       <div className="text-right">
-        <p className="text-lg font-extrabold leading-tight text-fuchsia-600">{player.score} pts</p>
+        <p className="text-lg font-extrabold leading-tight text-[var(--party-accent)]">{player.score} pts</p>
         {rank && <p className="text-xs text-slate-500 leading-tight">#{rank} of {totalPlayers}</p>}
       </div>
     </Link>

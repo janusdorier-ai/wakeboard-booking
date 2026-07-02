@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { getStoredToken } from '@/lib/party/client'
 import { usePlayer } from '@/lib/party/usePlayer'
 import { PlayerHeader } from '@/components/party/PlayerHeader'
+import { GuestShell } from '@/components/party/GuestShell'
 
 interface Row { name: string; team: string | null; avatar: string; score: number; is_me: boolean }
 
@@ -29,6 +30,7 @@ export default function LeaderboardPage() {
   }, [])
 
   return (
+    <GuestShell>
     <div className="space-y-6">
       <Link href="/party/play" className="inline-block text-sm font-semibold text-white/90">← Back</Link>
       <h1 className="text-center text-2xl font-black text-white drop-shadow">🏆 Leaderboard</h1>
@@ -41,7 +43,7 @@ export default function LeaderboardPage() {
           {top.map((row, i) => (
             <li
               key={i}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2 ${row.is_me ? 'bg-fuchsia-50 ring-2 ring-fuchsia-400' : ''}`}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 ${row.is_me ? 'bg-[color-mix(in_srgb,var(--party-accent)_8%,white)] ring-2 ring-[var(--party-accent)]' : ''}`}
             >
               <span className="w-7 text-center text-lg font-black text-slate-700">{MEDALS[i] ?? i + 1}</span>
               <span className="text-xl">{row.avatar}</span>
@@ -49,11 +51,12 @@ export default function LeaderboardPage() {
                 <p className="truncate font-semibold text-slate-900">{row.name}</p>
                 {row.team && <p className="truncate text-xs text-slate-500">{row.team}</p>}
               </div>
-              <span className="font-black text-fuchsia-600">{row.score}</span>
+              <span className="font-black text-[var(--party-accent)]">{row.score}</span>
             </li>
           ))}
         </ol>
       </div>
     </div>
+    </GuestShell>
   )
 }

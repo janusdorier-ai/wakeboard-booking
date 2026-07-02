@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getStoredToken } from '@/lib/party/client'
+import { GuestShell } from '@/components/party/GuestShell'
+import { CLIENT_THEME } from '@/lib/party/client-config'
 
 interface Question {
   id: string
@@ -67,9 +69,10 @@ export default function TriviaPage() {
   }
 
   return (
+    <GuestShell>
     <div className="space-y-6">
       <Link href="/party/play" className="inline-block text-sm font-semibold text-white/90">← Back</Link>
-      <h1 className="text-center text-2xl font-black text-white drop-shadow">🧠 Speed Trivia</h1>
+      <h1 className="text-center text-2xl font-black text-white drop-shadow">{CLIENT_THEME.games.trivia.icon} {CLIENT_THEME.games.trivia.title}</h1>
 
       {loading && <Card><p className="text-center text-slate-500">Loading…</p></Card>}
 
@@ -83,7 +86,7 @@ export default function TriviaPage() {
       {question && (
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wide text-fuchsia-600">Question</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-[var(--party-accent)]">Question</span>
             <span className={`text-lg font-black ${remaining <= 5 ? 'text-red-600' : 'text-slate-700'}`}>{remaining}s</span>
           </div>
           <p className="mb-5 text-lg font-bold text-slate-900">{question.question}</p>
@@ -102,8 +105,8 @@ export default function TriviaPage() {
                         ? myAnswer!.correct ? 'border-emerald-500 bg-emerald-50' : 'border-red-500 bg-red-50'
                         : 'border-slate-200 opacity-60'
                       : selected === i
-                        ? 'border-fuchsia-500 bg-fuchsia-50'
-                        : 'border-slate-200 hover:border-fuchsia-300'
+                        ? 'border-[var(--party-accent)] bg-[color-mix(in_srgb,var(--party-accent)_8%,white)]'
+                        : 'border-slate-200 hover:border-[color-mix(in_srgb,var(--party-accent)_40%,white)]'
                   }`}
                 >
                   {opt}
@@ -122,6 +125,7 @@ export default function TriviaPage() {
         </Card>
       )}
     </div>
+    </GuestShell>
   )
 }
 

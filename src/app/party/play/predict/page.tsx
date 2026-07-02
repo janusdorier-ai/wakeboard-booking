@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getStoredToken } from '@/lib/party/client'
+import { GuestShell } from '@/components/party/GuestShell'
+import { CLIENT_THEME } from '@/lib/party/client-config'
 
 interface Prediction { id: string; prompt: string; unit: string | null }
 
@@ -44,9 +46,10 @@ export default function PredictPage() {
   }
 
   return (
+    <GuestShell>
     <div className="space-y-6">
       <Link href="/party/play" className="inline-block text-sm font-semibold text-white/90">← Back</Link>
-      <h1 className="text-center text-2xl font-black text-white drop-shadow">🔮 Predictions</h1>
+      <h1 className="text-center text-2xl font-black text-white drop-shadow">{CLIENT_THEME.games.predict.icon} {CLIENT_THEME.games.predict.title}</h1>
 
       <div className="rounded-3xl bg-white/95 p-6 shadow-xl">
         {loading && <p className="text-center text-slate-500">Loading…</p>}
@@ -69,14 +72,14 @@ export default function PredictPage() {
                 value={guessInput}
                 onChange={(e) => setGuessInput(e.target.value)}
                 placeholder="Your guess"
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg outline-none focus:border-fuchsia-500"
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-lg outline-none focus:border-[var(--party-accent)]"
               />
               {prediction.unit && <span className="whitespace-nowrap text-slate-500">{prediction.unit}</span>}
             </div>
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-xl bg-fuchsia-600 py-3 text-lg font-bold text-white shadow-lg hover:bg-fuchsia-700 disabled:opacity-60"
+              className="w-full rounded-xl bg-[var(--party-accent)] py-3 text-lg font-bold text-white shadow-lg hover:bg-[var(--party-accent-dark)] disabled:opacity-60"
             >
               Lock in guess
             </button>
@@ -87,7 +90,7 @@ export default function PredictPage() {
           <>
             <p className="text-lg font-bold text-slate-900">{prediction.prompt}</p>
             <p className="mt-3 text-center text-sm font-medium text-slate-500">Your guess</p>
-            <p className="text-center text-4xl font-black text-fuchsia-600">
+            <p className="text-center text-4xl font-black text-[var(--party-accent)]">
               {myGuess}{prediction.unit ? ` ${prediction.unit}` : ''}
             </p>
             <p className="mt-3 text-center text-sm text-slate-500">Locked in — results reveal when the host closes this round.</p>
@@ -95,5 +98,6 @@ export default function PredictPage() {
         )}
       </div>
     </div>
+    </GuestShell>
   )
 }
